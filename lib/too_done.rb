@@ -103,11 +103,31 @@ module TooDone
     option :user, :aliases => :u,
       :desc => "The user which will be deleted (including lists and items)."
     def delete
-      # BAIL if both list and user options are provided
-      # BAIL if neither list or user option is provided
-      # find the matching user or list
-      # BAIL if the user or list couldn't be found
-      # delete them (and any dependents)
+      if options[:list] && options[:user] 
+        puts "Error"
+        exit
+      end
+
+      if options[:list].nil? && options[:user].nil? 
+        puts "Provide error or list"
+        exit
+      end
+
+      if options[:user] && options[:list].nil?
+        user = User.find_by name: options[:user] 
+        if user.nil?
+          puts "Bogus user"
+          exit
+        end
+        user.destroy
+      elsif options[:list] && options[:user].nil?
+        list = ToDoList.find_by user_id: current_user.id, name: options[:list]
+        if list.nil? 
+          puts "Bogus list"
+          exit
+        end
+        list.destroy
+      end  
     end
 
     desc "switch USER", "Switch session to manage USER's todo lists."
