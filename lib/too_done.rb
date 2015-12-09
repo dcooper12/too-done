@@ -3,6 +3,9 @@ require "too_done/init_db"
 require "too_done/user"
 require "too_done/session"
 
+require "too_done/to_do_list"
+require "too_done/task"
+
 require "thor"
 require "pry"
 
@@ -15,18 +18,35 @@ module TooDone
     option :date, :aliases => :d,
       :desc => "A Due Date in YYYY-MM-DD format."
     def add(task)
-      # find or create the right todo list
-      # create a new item under that list, with optional date
+      list = ToDoList.find_or_create_by(name: options[:list] , user_id:  current_user.id)
+      Task.create(name: task, list_id: list.id, due_date: options[:date])
     end
 
     desc "edit", "Edit a task from a todo list."
     option :list, :aliases => :l, :default => "*default*",
       :desc => "The todo list whose tasks will be edited."
     def edit
-      # find the right todo list
-      # BAIL if it doesn't exist and have tasks
-      # display the tasks and prompt for which one to edit
-      # allow the user to change the title, due date
+      list = ToDoList.find_by(user_id: current_user.id, name: options[:list]) 
+        if list == nil
+          puts "No list"
+          exit                                                                     
+        end                         
+      tasks = Task.where(list_id: list.id, completed: false)  
+        tasks.each do |task| 
+          puts "Incompleted task: #{task.name} | task-id: #{task.id}"
+        end
+        puts "Please choose task"
+        task_id = STDIN.gets.chomp.to_i
+        puts "Edit title"  
+        new_title = STDIN.gets.chomp.to_s
+        puts "Modify due date in the following format: YYYY-MM-DD."
+        new_due_date = STDIN.gets.chomp
+
+        edit_task = Task.find(task_id)
+        edit_task.name = new_title unless new_title.empty?
+        edit_task.new_due_date = new_due_date unless new_due_date.empty?
+        edit_task.update
+        puts "Update complete"
     end
 
     desc "done", "Mark a task as completed."
