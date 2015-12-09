@@ -53,9 +53,19 @@ module TooDone
     option :list, :aliases => :l, :default => "*default*",
       :desc => "The todo list whose tasks will be completed."
     def done
-      # find the right todo list
-      # BAIL if it doesn't exist and have tasks
-      # display the tasks and prompt for which one(s?) to mark done
+      list = ToDoList.find_by(user_id: current_user.id, name: options[:list])
+      if list == nil 
+        puts "No list found."                     
+        exit
+      end
+
+      tasks = Task.where(completed: false, list_id: list.id)
+        tasks.each do |task|
+          puts "Task Name: #{task.name} | Task id: #{task.id} | Task Completed: #{task.completed}"
+        end
+      puts "Please choose a task" 
+      done = STDIN.gets.chomp.to_i               
+      tasks = Task.update(done, completed: true)
     end
 
     desc "show", "Show the tasks on a todo list in reverse order."
@@ -67,8 +77,24 @@ module TooDone
       :desc => "Sorting by 'history' (chronological) or 'overdue'.
       \t\t\t\t\tLimits results to those with a due date."
     def show
-      # find or create the right todo list
-      # show the tasks ordered as requested, default to reverse order (recently entered first)
+      list = ToDoList.find_by(user_id: current_user.id, name: options[:list]) 
+        if list == nil
+          puts "No list found"
+          exit
+        end
+
+      tasks = Task.where(completed: false, list_id: list.id)
+      tasks = tasks.where(completed: false) unless options[:completed] 
+        if tasks == nil
+          puts "No tasks found."
+          exit
+        end
+                                                      
+      tasks = tasks.order(due_date: :desc) 
+      tasks = tasks.order due_date: :asc if options[:sort] == 'history' 
+      tasks.each do |task|
+        puts "Task name: #{task.name} | Task id: #{task.id} | Completed: #{task.completed} | Due Date: #{task.due_date}"
+      end
     end
 
     desc "delete [LIST OR USER]", "Delete a todo list or a user."
